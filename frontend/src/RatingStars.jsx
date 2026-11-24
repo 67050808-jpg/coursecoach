@@ -1,0 +1,104 @@
+/** Shared six-question Likert scale used by review forms and rating displays. */
+export const RATING_FIELDS = [
+  "satisfaction",
+  "recommendation",
+  "workload",
+  "content",
+  "teaching",
+  "exam",
+];
+
+export const RATING_LABELS = {
+  satisfaction: "ความพึงพอใจกับรายวิชานี้",
+  recommendation: "ความต้องการแนะนำรายวิชานี้ให้กับนักศึกษาคนอื่น",
+  workload: "งานและการบ้านของรายวิชานี้มีความเหมาะสม",
+  content: "เนื้อหาและสื่อการสอนของรายวิชานี้มีคุณภาพ",
+  teaching: "อาจารย์อธิบายเนื้อหาได้เข้าใจง่าย",
+  exam: "การสอบและการให้คะแนนมีความเหมาะสมและยุติธรรม",
+};
+
+export const RATING_SHORT_LABELS = {
+  satisfaction: "ความพึงพอใจ",
+  recommendation: "การแนะนำรายวิชา",
+  workload: "งานและการบ้าน",
+  content: "เนื้อหาและสื่อการสอน",
+  teaching: "การอธิบายของอาจารย์",
+  exam: "การสอบและการให้คะแนน",
+};
+
+const LIKERT_OPTIONS = [
+  { value: 1, label: "ไม่เห็นด้วยอย่างยิ่ง" },
+  { value: 2, label: "ไม่เห็นด้วย" },
+  { value: 3, label: "ปานกลาง" },
+  { value: 4, label: "เห็นด้วย" },
+  { value: 5, label: "เห็นด้วยอย่างยิ่ง" },
+];
+
+export function defaultRatings(source = 3) {
+  return RATING_FIELDS.reduce((acc, field) => ({ ...acc, [field]: source }), {});
+}
+
+export function ratingsFromReview(review) {
+  return RATING_FIELDS.reduce(
+    (acc, field) => ({ ...acc, [field]: Number(review[`rating_${field}`]) }),
+    {}
+  );
+}
+
+export function StarDisplay({ value }) {
+  const score = Number(value) || 0;
+  return (
+    <span className="star-display" aria-label={`${score} / 5`}>
+      {"★".repeat(score)}
+      {"☆".repeat(Math.max(0, 5 - score))}
+    </span>
+  );
+}
+
+function LikertInput({ field, label, value, onChange, invalid }) {
+  const selectedOption = LIKERT_OPTIONS.find((option) => option.value === value);
+  return (
+    <fieldset className={`likert-question ${invalid ? 'ux-field-invalid' : ''}`} data-rating-field={field} aria-describedby={`rating-selection-${field}${invalid ? ` rating-error-${field}` : ''}`}>
+      <legend>{label}</legend>
+      <div className="likert-options">
+        {LIKERT_OPTIONS.map((option) => (
+          <label className={`likert-option likert-option-${option.value} ${value === option.value ? "selected" : ""}`} key={option.value}>
+            <input type="radio" name={`rating-${field}`} aria-label={`${option.value} ${option.label}`} value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} />
+            <span>{option.value}</span>
+          </label>
+        ))}
+      </div>
+      <div className="likert-endpoints" aria-hidden="true"><span>ไม่เห็นด้วยอย่างยิ่ง</span><span>เห็นด้วยอย่างยิ่ง</span></div>
+      <p id={`rating-selection-${field}`} className="likert-selection" aria-live="polite">{selectedOption ? `เลือก ${value} · ${selectedOption.label}` : 'ยังไม่ได้เลือกคะแนน'}</p>
+      {invalid && <p id={`rating-error-${field}`} className="ux-field-error">กรุณาเลือกคะแนนด้านนี้</p>}
+    </fieldset>
+  );
+}
+
+export function RatingBreakdown({ ratings, excludeSatisfaction = false }) {
+  return (
+    <div className="rating-breakdown">
+      {RATING_FIELDS.filter(field => !excludeSatisfaction || field !== 'satisfaction').map((field) => (
+        <div className="rating-row" key={field}>
+          <span className="rating-label">{RATING_LABELS[field]}</span>
+          <StarDisplay value={ratings[field]} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RatingForm({ ratings, onChange, missing = [] }) {
+  return (
+    <div className="likert-form">
+      <div className="likert-scale" aria-label="ความหมายของคะแนน">
+        {LIKERT_OPTIONS.map((option) => (
+          <span key={option.value}><strong>{option.value}</strong> — {option.label}</span>
+        ))}
+      </div>
+      {RATING_FIELDS.map((field) => (
+        <LikertInput key={field} field={field} label={RATING_LABELS[field]} value={ratings[field]} invalid={missing.includes(field)} onChange={(score) => onChange({ ...ratings, [field]: score })} />
+      ))}
+    </div>
+  );
+}
